@@ -1,0 +1,9 @@
+{
+    "Folders": [
+        {
+            "source": "C:\\Users\\15129\\Desktop\\note",
+            "destination": ["E:\\note", "F:\\note", "G:\\note"]
+        }
+    ],
+    "auto": true
+}
