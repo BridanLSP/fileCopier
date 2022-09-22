@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -32,18 +31,24 @@ func ParseTask() (*[]Folder, bool) {
 	return &fc.Folders, fc.Auto
 }
 
-func VerifyTask(fd *Folder) bool {
+func VerifyTask(fd *Folder) (*Folder, bool) {
 	src := fd.Source
 	info, err := os.Stat(src)
 	if err != nil {
 		log.Println(err, "can't find source folder", src)
-		return false
+		return nil, false
 	}
 	if !info.IsDir() {
 		log.Println(src, "is not a folder")
-		return false
+		return nil, false
 	}
-	return true
+	for i, d := range fd.Destination {
+		info, err := os.Stat(d)
+		if err != nil || !info.IsDir() {
+			fd.Destination = append(fd.Destination[:i], fd.Destination[i+1:]...)
+		}
+	}
+	return fd, true
 }
 
 func ProcessTask(fd *Folder) {
@@ -76,11 +81,11 @@ func ProcessTask(fd *Folder) {
 				} else {
 					s, err := os.Open(src)
 					if err != nil {
-						fmt.Println(err)
+						log.Println(err)
 					}
 					d, err := os.Create(dst)
 					if err != nil {
-						fmt.Println(err)
+						log.Println(err)
 					}
 					io.Copy(d, s)
 				}
@@ -98,7 +103,7 @@ func ProcessTrash(fd *Folder) {
 	MoveToTrash = func(src, dst string) {
 		files, err := os.ReadDir(dst)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		for _, f := range files {
 			s := src + "\\" + f.Name()
@@ -113,7 +118,7 @@ func ProcessTrash(fd *Folder) {
 				if os.IsNotExist(err) {
 					err = os.Rename(d, trashBin+"\\"+f.Name())
 					if err != nil {
-						fmt.Println(err)
+						log.Println(err)
 					}
 				}
 			}
@@ -125,7 +130,7 @@ func ProcessTrash(fd *Folder) {
 		if err != nil {
 			err := os.Mkdir(trashBin, os.ModePerm)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			}
 		}
 		MoveToTrash(fd.Source, d)
@@ -134,14 +139,12 @@ func ProcessTrash(fd *Folder) {
 
 func WorkFlow(fds *[]Folder) {
 	for _, fd := range *fds {
-		// go func(fd Folder) {
-		ok := VerifyTask(&fd)
+		fd, ok := VerifyTask(&fd)
 		if !ok {
 			return
 		}
-		ProcessTask(&fd)
-		ProcessTrash(&fd)
-		// }(fd)
+		ProcessTask(fd)
+		ProcessTrash(fd)
 	}
 }
 
