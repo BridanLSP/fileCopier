@@ -42,12 +42,19 @@ func VerifyTask(fd *Folder) (*Folder, bool) {
 		log.Println(src, "is not a folder")
 		return nil, false
 	}
-	for i, d := range fd.Destination {
-		info, err := os.Stat(d)
-		if err != nil || !info.IsDir() {
-			fd.Destination = append(fd.Destination[:i], fd.Destination[i+1:]...)
+	newfd := []string{}
+	for _, d := range fd.Destination {
+		_, err := os.Stat(d)
+		if err != nil {
+			err2 := os.Mkdir(d, os.ModePerm)
+			if err2 == nil {
+				newfd = append(newfd, d)
+			}
+		} else {
+			newfd = append(newfd, d)
 		}
 	}
+	fd.Destination = newfd
 	return fd, true
 }
 
